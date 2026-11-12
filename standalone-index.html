@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KS Motion Studio — Montage & Motion Task Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- React 18 & Babel Standalone for instant single-file hosting anywhere -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.3/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Cairo', 'Inter', sans-serif;
+      background-color: #0B0D12;
+      color: #F1F5F9;
+      margin: 0;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body class="bg-[#0B0D12] text-slate-100 antialiased selection:bg-[#4285F4]/30">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ============================================================================
+    // LESSON CONFIG & DATA CONSTANTS
+    // ============================================================================
+    const STORAGE_KEY = 'ks_motion_montage_tasks_v1';
+
+    const MASTER_STYLES = [
+      { id: 'tecoma', label: 'Tecoma-X Pro', color: '#00F5A0', bg: 'rgba(0, 245, 160, 0.12)' },
+      { id: 'saudi', label: 'Saudi Mixed-Media', color: '#FBBC04', bg: 'rgba(251, 188, 4, 0.14)' },
+      { id: 'vox', label: 'Vox Geo-Doc', color: '#4285F4', bg: 'rgba(66, 133, 244, 0.14)' },
+      { id: 'hormozi', label: 'Hormozi Kinetic', color: '#34A853', bg: 'rgba(52, 168, 83, 0.14)' },
+      { id: 'bento', label: 'Apple Glass Bento', color: '#A855F7', bg: 'rgba(168, 85, 247, 0.14)' },
+      { id: 'magnates', label: 'MagnatesMedia Cinema', color: '#EA4335', bg: 'rgba(234, 67, 53, 0.14)' },
+    ];
+
+    const DEFAULT_TASKS = [
+      {
+        id: 'scene-1',
+        title: 'تقطيع الهوك الافتتاحي + إضافة حركة كاميرا Z-Tunnel (00:00 - 00:05)',
+        timecode: '00:00 - 00:05',
+        styleId: 'tecoma',
+        completed: true,
+        createdAt: Date.now() - 3600000 * 3,
+      },
+      {
+        id: 'scene-2',
+        title: 'مزامنة الكابشن الحركي مع الصوت + تلوين الكلمات المفتاحية',
+        timecode: '00:05 - 00:14',
+        styleId: 'hormozi',
+        completed: false,
+        createdAt: Date.now() - 3600000 * 2,
+      },
+      {
+        id: 'scene-3',
+        title: 'إضافة خريطة ثلاثية الأبعاد بمسار متحرك + إضاءة محيطية واقعية',
+        timecode: '00:14 - 00:24',
+        styleId: 'vox',
+        completed: false,
+        createdAt: Date.now() - 3600000,
+      },
+      {
+        id: 'scene-4',
+        title: 'تصحيح الألوان النهائي (Color Grading) + لمسة Film Grain وتصدير 60fps',
+        timecode: '00:24 - 00:30',
+        styleId: 'magnates',
+        completed: false,
+        createdAt: Date.now() - 1800000,
+      },
+    ];
+
+    // ============================================================================
+    // COMPONENT 1: StudioHeader (Receives props from parent)
+    // ============================================================================
+    function StudioHeader({ totalCount, completedCount }) {
+      const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+
+      return (
+        <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#131722]/90 p-6 sm:p-8 shadow-2xl backdrop-blur-xl transition-all duration-500">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-[#4285F4] via-[#EA4335] via-[#FBBC04] to-[#34A853] opacity-90" />
+          <div className="pointer-events-none -right-16 -top-16 absolute h-48 w-48 rounded-full bg-[#4285F4]/15 blur-3xl" />
+          <div className="pointer-events-none -bottom-16 -left-16 absolute h-48 w-48 rounded-full bg-[#34A853]/10 blur-3xl" />
+
+          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
+                <span className="h-2 w-2 rounded-full bg-[#34A853] animate-pulse" />
+                <span>KS Motion Studio × Google Material Motion</span>
+              </div>
+
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#4285F4] to-[#34A853] text-white shadow-lg shadow-[#4285F4]/25">
+                  🎬
+                </span>
+                <span>Montage &amp; Motion Task Studio</span>
+              </h1>
+
+              <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+                أداة إدارة مهام المونتاج والمشاهد بتصميم مستوحى من جوجل وحركة ديناميكية واقعية — جاهزة للاستخدام والمشاركة أونلاين.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 self-start sm:self-center rounded-2xl border border-white/10 bg-black/30 px-5 py-3.5 backdrop-blur-md">
+              <div className="relative flex h-14 w-14 items-center justify-center">
+                <svg className="h-14 w-14 -rotate-90" viewBox="0 0 56 56">
+                  <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                  <circle
+                    cx="28"
+                    cy="28"
+                    r="22"
+                    fill="none"
+                    stroke="url(#googleGrad)"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 22}
+                    strokeDashoffset={2 * Math.PI * 22 * (1 - progress / 100)}
+                    className="transition-all duration-700"
+                  />
+                  <defs>
+                    <linearGradient id="googleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#4285F4" />
+                      <stop offset="50%" stopColor="#FBBC04" />
+                      <stop offset="100%" stopColor="#34A853" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <span className="absolute text-xs font-bold text-white tabular-nums">{progress}%</span>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Timeline Progress</div>
+                <div className="text-lg font-semibold text-white tabular-nums">
+                  {completedCount} / {totalCount} <span className="text-xs font-normal text-slate-400">مشهد جاهز</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    // ============================================================================
+    // COMPONENT 2: TaskComposer (Form state + Event handling)
+    // ============================================================================
+    function TaskComposer({ onAddTask }) {
+      const [title, setTitle] = useState('');
+      const [timecode, setTimecode] = useState('');
+      const [styleId, setStyleId] = useState('tecoma');
+
+      function handleSubmit(event) {
+        event.preventDefault();
+        const trimmed = title.trim();
+        if (!trimmed) return;
+
+        onAddTask({
+          title: trimmed,
+          timecode: timecode.trim() || '00:00 - 00:05',
+          styleId,
+        });
+
+        setTitle('');
+        setTimecode('');
+      }
+
+      return (
+        <form
+          onSubmit={handleSubmit}
+          className="group relative rounded-3xl border border-white/10 bg-[#131722]/85 p-5 shadow-xl backdrop-blur-xl transition-all duration-300 hover:border-white/20"
+        >
+          <div className="flex flex-col gap-3.5">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="أضف مهمة مونتاج جديدة (مثلاً: إضافة انتقال Whip-Pan للمشهد الرابع)..."
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all duration-200 focus:border-[#4285F4] focus:ring-2 focus:ring-[#4285F4]/25"
+                />
+              </div>
+
+              <div className="relative sm:w-44">
+                <input
+                  type="text"
+                  value={timecode}
+                  onChange={(e) => setTimecode(e.target.value)}
+                  placeholder="00:10 - 00:15"
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 font-mono outline-none transition-all duration-200 focus:border-[#FBBC04] focus:ring-2 focus:ring-[#FBBC04]/25"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-slate-400 ml-1">الستايل:</span>
+                {MASTER_STYLES.map((style) => {
+                  const isSelected = styleId === style.id;
+                  return (
+                    <button
+                      key={style.id}
+                      type="button"
+                      onClick={() => setStyleId(style.id)}
+                      style={{
+                        borderColor: isSelected ? style.color : 'rgba(255,255,255,0.08)',
+                        backgroundColor: isSelected ? style.bg : 'rgba(255,255,255,0.03)',
+                        color: isSelected ? style.color : '#94A3B8',
+                      }}
+                      className="rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 hover:scale-[1.03] active:scale-95"
+                    >
+                      {style.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="submit"
+                disabled={!title.trim()}
+                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#4285F4] to-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#4285F4]/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[#4285F4]/40 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <span>+ إضافة للمونتاج</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      );
+    }
+
+    // ============================================================================
+    // COMPONENT 3: FilterToolbar
+    // ============================================================================
+    function FilterToolbar({ filter, onFilterChange, searchQuery, onSearchChange, counts, onClearCompleted }) {
+      const tabs = [
+        { id: 'all', label: 'الكل', count: counts.all },
+        { id: 'active', label: 'قيد المونتاج', count: counts.active },
+        { id: 'completed', label: 'مكتمل', count: counts.completed },
+      ];
+
+      return (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#131722]/70 p-3 backdrop-blur-lg">
+          <div className="flex items-center gap-1.5">
+            {tabs.map((tab) => {
+              const active = filter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onFilterChange(tab.id)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-medium transition-all duration-200 ${
+                    active
+                      ? 'bg-[#4285F4] text-white shadow-md shadow-[#4285F4]/25'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
+                      active ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-52">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="بحث في المشاهد..."
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-[#4285F4]"
+              />
+            </div>
+
+            {counts.completed > 0 && (
+              <button
+                type="button"
+                onClick={onClearCompleted}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition-all hover:border-[#EA4335]/40 hover:bg-[#EA4335]/10 hover:text-[#EA4335]"
+              >
+                <span>مسح المكتمل</span>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================================================
+    // COMPONENT 4: MontageTaskCard
+    // ============================================================================
+    function MontageTaskCard({ task, onToggle, onDelete, onEdit }) {
+      const [isEditing, setIsEditing] = useState(false);
+      const [draftTitle, setDraftTitle] = useState(task.title);
+      const [draftTimecode, setDraftTimecode] = useState(task.timecode);
+      const [draftStyleId, setDraftStyleId] = useState(task.styleId);
+
+      const styleMeta = MASTER_STYLES.find((s) => s.id === task.styleId) || MASTER_STYLES[0];
+
+      function handleSave() {
+        const trimmed = draftTitle.trim();
+        if (!trimmed) return;
+        onEdit(task.id, {
+          title: trimmed,
+          timecode: draftTimecode.trim() || '00:00 - 00:05',
+          styleId: draftStyleId,
+        });
+        setIsEditing(false);
+      }
+
+      function handleCancel() {
+        setDraftTitle(task.title);
+        setDraftTimecode(task.timecode);
+        setDraftStyleId(task.styleId);
+        setIsEditing(false);
+      }
+
+      function handleKeyDown(e) {
+        if (e.key === 'Enter') handleSave();
+        if (e.key === 'Escape') handleCancel();
+      }
+
+      return (
+        <div
+          className={`group relative rounded-2xl border p-4 transition-all duration-300 ${
+            task.completed
+              ? 'border-white/5 bg-[#131722]/45 opacity-75'
+              : 'border-white/10 bg-[#131722]/90 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-xl hover:shadow-black/40'
+          }`}
+        >
+          <div
+            className="absolute inset-y-3 right-0 w-1 rounded-l-full transition-all duration-300"
+            style={{ backgroundColor: task.completed ? '#34A853' : styleMeta.color }}
+          />
+
+          {isEditing ? (
+            <div className="pr-3 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="text"
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  className="flex-1 rounded-xl border border-[#4285F4]/60 bg-black/50 px-3.5 py-2 text-sm text-white outline-none"
+                />
+                <input
+                  type="text"
+                  value={draftTimecode}
+                  onChange={(e) => setDraftTimecode(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="sm:w-36 rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs font-mono text-white outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <select
+                  value={draftStyleId}
+                  onChange={(e) => setDraftStyleId(e.target.value)}
+                  className="rounded-xl border border-white/15 bg-black/50 px-3 py-1.5 text-xs text-slate-200 outline-none"
+                >
+                  {MASTER_STYLES.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-[#131722]">
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="rounded-xl bg-[#34A853] px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-[#34A853]/25 hover:brightness-110"
+                  >
+                    حفظ
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="pr-3 flex items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => onToggle(task.id)}
+                  className={`mt-0.5 sm:mt-0 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all ${
+                    task.completed
+                      ? 'border-[#34A853] bg-[#34A853] text-white'
+                      : 'border-slate-500 hover:border-[#4285F4]'
+                  }`}
+                >
+                  {task.completed ? '✓' : ''}
+                </button>
+
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p
+                    className={`text-sm sm:text-[15px] font-medium leading-snug transition-all duration-300 ${
+                      task.completed ? 'line-through text-slate-500' : 'text-slate-100'
+                    }`}
+                  >
+                    {task.title}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-white/5 px-2 py-0.5 text-[11px] font-mono text-slate-300 border border-white/5">
+                      ⏱ {task.timecode}
+                    </span>
+
+                    <span
+                      style={{
+                        color: styleMeta.color,
+                        backgroundColor: styleMeta.bg,
+                        borderColor: `${styleMeta.color}33`,
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-medium"
+                    >
+                      {styleMeta.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="rounded-xl px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:bg-[#4285F4]/15 hover:text-[#4285F4]"
+                >
+                  تعديل
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(task.id)}
+                  className="rounded-xl px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:bg-[#EA4335]/15 hover:text-[#EA4335]"
+                >
+                  حذف
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ============================================================================
+    // MAIN APP COMPONENT
+    // ============================================================================
+    function App() {
+      const [tasks, setTasks] = useState(() => {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) return parsed;
+          }
+        } catch {}
+        return DEFAULT_TASKS;
+      });
+
+      const [filter, setFilter] = useState('all');
+      const [searchQuery, setSearchQuery] = useState('');
+
+      useEffect(() => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        } catch {}
+      }, [tasks]);
+
+      function handleAddTask({ title, timecode, styleId }) {
+        const newTask = {
+          id: `scene-${Date.now()}`,
+          title,
+          timecode,
+          styleId,
+          completed: false,
+          createdAt: Date.now(),
+        };
+        setTasks((prev) => [newTask, ...prev]);
+      }
+
+      function handleToggleTask(taskId) {
+        setTasks((prev) =>
+          prev.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task))
+        );
+      }
+
+      function handleEditTask(taskId, updates) {
+        setTasks((prev) =>
+          prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
+        );
+      }
+
+      function handleDeleteTask(taskId) {
+        setTasks((prev) => prev.filter((task) => task.id !== taskId));
+      }
+
+      function handleClearCompleted() {
+        setTasks((prev) => prev.filter((task) => !task.completed));
+      }
+
+      const counts = {
+        all: tasks.length,
+        active: tasks.filter((t) => !t.completed).length,
+        completed: tasks.filter((t) => t.completed).length,
+      };
+
+      const visibleTasks = tasks.filter((task) => {
+        const matchesTab =
+          filter === 'all' ||
+          (filter === 'active' && !task.completed) ||
+          (filter === 'completed' && task.completed);
+
+        const q = searchQuery.trim().toLowerCase();
+        const matchesSearch =
+          !q ||
+          task.title.toLowerCase().includes(q) ||
+          task.timecode.toLowerCase().includes(q);
+
+        return matchesTab && matchesSearch;
+      });
+
+      return (
+        <div className="min-h-screen bg-[#0B0D12] text-slate-100">
+          <div
+            className="pointer-events-none fixed inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)',
+              backgroundSize: '28px 28px',
+            }}
+          />
+
+          <main className="relative mx-auto max-w-3xl px-4 py-6 sm:py-10 space-y-5">
+            <StudioHeader totalCount={counts.all} completedCount={counts.completed} />
+            <TaskComposer onAddTask={handleAddTask} />
+            <FilterToolbar
+              filter={filter}
+              onFilterChange={setFilter}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              counts={counts}
+              onClearCompleted={handleClearCompleted}
+            />
+
+            <section className="space-y-3">
+              {visibleTasks.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-white/10 bg-[#131722]/40 py-12 px-6 text-center space-y-2">
+                  <p className="text-sm font-medium text-slate-300">لا توجد مهام مطابقة للفلتر الحالي</p>
+                  <p className="text-xs text-slate-500">جرّب إضافة مشهد جديد أو تغيير فلتر البحث.</p>
+                </div>
+              ) : (
+                visibleTasks.map((task) => (
+                  <MontageTaskCard
+                    key={task.id}
+                    task={task}
+                    onToggle={handleToggleTask}
+                    onDelete={handleDeleteTask}
+                    onEdit={handleEditTask}
+                  />
+                ))
+              )}
+            </section>
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
